@@ -1,70 +1,98 @@
 // /* eslint-disable @typescript-eslint/ban-types */
-import { ArgumentMetadata, Injectable, PipeTransform } from '@nestjs/common'
-import { plainToInstance, Type } from 'class-transformer'
-import { IsInt, IsObject, IsOptional, IsString, ValidateNested } from 'class-validator'
+import { ArgumentMetadata, Injectable, PipeTransform } from "@nestjs/common";
+import {
+  IsInt,
+  IsObject,
+  IsOptional,
+  IsString,
+  ValidateNested,
+} from "class-validator";
 
-type Order = 'asc' | 'desc'
+import { Type } from "class-transformer";
+
+type Order = "asc" | "desc";
 
 export class Paging {
   @Type(() => Number)
   @IsInt()
   @IsOptional()
-  public offset: number
+  public offset: number;
 
   @Type(() => Number)
   @IsInt()
   @IsOptional()
-  public limit: number
+  public limit: number;
 }
 
 export class Sorting {
   @IsString()
   @IsOptional()
-  readonly field: string
+  readonly field: string;
 
-  readonly direction: Order
+  readonly direction: Order;
 }
 
 export class QueryRequestDto {
   @Type(() => Number)
   @IsInt()
   @IsOptional()
-  public offset: number
+  public offset: number;
 
   @Type(() => Number)
   @IsInt()
   @IsOptional()
-  public limit: number
+  public limit: number;
 
   @IsString()
   @IsOptional()
-  public field: string
+  public field: string;
 
   @IsOptional()
-  public direction: Order
+  public direction: Order;
 }
 
-export class Filter {
+/**
+ * This type should only be used
+ * to assign the properties of a class in a constructor
+ */
+
+export class FilterDto {
   @IsObject()
   @ValidateNested()
   @Type(() => Paging)
   @IsOptional()
-  readonly paging: Paging
+  readonly paging: Paging;
 
   @IsObject()
   @ValidateNested()
   @Type(() => Sorting)
   @IsOptional()
-  readonly sorting: Sorting
+  readonly sorting: Sorting;
+
+  constructor(filter: FilterDto) {
+    Object.assign<this, FilterDto>(this, {
+      ...filter,
+    });
+  }
 }
 
 @Injectable()
 export class QueryTransformPipe implements PipeTransform {
   async transform(value: QueryRequestDto, { metatype }: ArgumentMetadata) {
     if (!metatype) {
-      return value
+      return value;
     }
 
-    return plainToInstance<Filter, QueryRequestDto>(metatype, value)
+    const filter: FilterDto = {
+      paging: {
+        offset: value.offset ?? undefined,
+        limit: value.limit ?? undefined,
+      },
+      sorting: {
+        field: value.field ?? undefined,
+        direction: value.direction ?? undefined,
+      },
+    };
+    return new FilterDto(filter);
   }
 }
