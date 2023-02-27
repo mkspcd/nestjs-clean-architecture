@@ -24,15 +24,15 @@ export class Paging {
   public limit: number;
 }
 
-export class Sorting {
+export class Sorting<T> {
   @IsString()
   @IsOptional()
-  readonly field: string;
+  readonly field: keyof T;
 
   readonly direction: Order;
 }
 
-export class QueryRequestDto {
+export class QueryRequestDto<T> {
   @Type(() => Number)
   @IsInt()
   @IsOptional()
@@ -45,7 +45,7 @@ export class QueryRequestDto {
 
   @IsString()
   @IsOptional()
-  public field: string;
+  public field: keyof T;
 
   @IsOptional()
   public direction: Order;
@@ -56,7 +56,7 @@ export class QueryRequestDto {
  * to assign the properties of a class in a constructor
  */
 
-export class FilterDto {
+export class FilterDto<T> {
   @IsObject()
   @ValidateNested()
   @Type(() => Paging)
@@ -67,30 +67,34 @@ export class FilterDto {
   @ValidateNested()
   @Type(() => Sorting)
   @IsOptional()
-  readonly sorting: Sorting;
+  readonly sorting: Sorting<T>;
 
-  constructor(filter: FilterDto) {
-    Object.assign<this, FilterDto>(this, {
+  constructor(filter: FilterDto<T>) {
+    Object.assign<this, FilterDto<T>>(this, {
       ...filter,
     });
   }
 }
 
+const DEFAULT_OFFSET = 0;
+const DEFAULT_LIMIT = 20;
+const DEFAULT_DIRECTION: Order = "asc";
+
 @Injectable()
-export class QueryTransformPipe implements PipeTransform {
-  async transform(value: QueryRequestDto, { metatype }: ArgumentMetadata) {
+export class QueryTransformPipe<T> implements PipeTransform {
+  async transform(value: QueryRequestDto<T>, { metatype }: ArgumentMetadata) {
     if (!metatype) {
       return value;
     }
 
-    const filter: FilterDto = {
+    const filter: FilterDto<T> = {
       paging: {
-        offset: value.offset ?? undefined,
-        limit: value.limit ?? undefined,
+        offset: value.offset ?? DEFAULT_OFFSET,
+        limit: value.limit ?? DEFAULT_LIMIT,
       },
       sorting: {
         field: value.field ?? undefined,
-        direction: value.direction ?? undefined,
+        direction: value.direction ?? DEFAULT_DIRECTION,
       },
     };
     return new FilterDto(filter);
